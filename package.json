@@ -1,0 +1,59 @@
+{
+  "name": "smwcentral-player",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "GPL-3.0-or-later",
+  "scripts": {
+    "start": "electron index.js",
+    "test": "electron index.js \"smwcentralplayer://id=21493&type=SMW&name=Super+Mario+Archipelago\"",
+    "setPath": "cmd /k \"set path=%path%\"",
+    "repl": "electron-repl index.js",
+    "build": "electron-builder -w"
+  },
+  "dependencies": {
+    "cross-spawn": "^7.0.1",
+    "electron-store": "^5.1.0",
+    "electron-unhandled": "^3.0.2",
+    "extract-zip": "^1.6.7",
+    "jsonschema": "^1.2.5",
+    "p-event": "^4.1.0",
+    "request": "^2.88.0",
+    "request-promise-any": "^1.0.8",
+    "sanitize-filename": "^1.6.3"
+  },
+  "devDependencies": {
+    "electron": "^7.1.11",
+    "electron-repl": "^1.0.1",
+    "electron-builder": "^22.3.2"
+  },
+  "build": {
+    "appId": "com.azmworld.smwcentralplayer",
+    "productName": "SMWCentral Player",
+    "directories": {
+      "output": "./build"
+    },
+    "win": {
+      "target": "portable"
+    },
+    "files": [
+      "**/*",
+      "./static/**/*",
+	  "./defaultSettings.json",
+	  "!./External/**/*",
+      "!**/node_modules/*/{CHANGELOG.md,README.md,README,readme.md,readme}",
+      "!**/node_modules/*/{test,__tests__,tests,powered-test,example,examples}",
+      "!**/node_modules/*.d.ts",
+      "!**/node_modules/.bin",
+      "!**/*.{iml,o,hprof,orig,pyc,pyo,rbc,swp,csproj,sln,xproj}",
+      "!.editorconfig",
+      "!**/._*",
+      "!**/{.DS_Store,.git,.hg,.svn,CVS,RCS,SCCS,.gitignore,.gitattributes}",
+      "!**/{__pycache__,thumbs.db,.flowconfig,.idea,.vs,.nyc_output}",
+      "!**/{appveyor.yml,.travis.yml,circle.yml}",
+      "!**/{npm-debug.log,yarn.lock,.yarn-integrity,.yarn-metadata.json}"
+    ]
+  },
+  "extraResources": "defaultSettings.json",
+  "description": "SMWCentral Player",
+  "author": "AZMWorld"
+}

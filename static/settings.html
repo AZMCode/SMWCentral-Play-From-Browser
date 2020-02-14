@@ -1,0 +1,45 @@
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="style.css" media="screen" />
+		<script src="settings.js"></script>
+		<meta http-equiv="Content-Security-Policy" content="default-src 'self'">
+	</head>
+	<body>
+		<form id="game-template" class="game-settings template">
+			<div name="title" class="game-settings-title"></div>
+			<label>
+				<input type="checkbox" name="enabled">Enabled
+			</label>
+			<div name="contents" class="game-contents">
+				<label>
+					Directory where patch files will be stored:
+					<input type="text" name="patch_files_storage">
+					<input type="button" name="patch_files_storage.folderBrowse" value="Browse">
+				</label><br/>
+				<label>
+					Directory where the patched ROM files will be stored:
+					<input type="text" name="finished_files_storage">
+					<input type="button" name="finished_files_storage.folderBrowse" value="Browse">
+				</label><br/>
+				<label>
+					Path to the original game ROM:
+					<input type="text" name="original_rom">
+					<input type="button" name="original_rom.fileBrowse" value="Browse">
+				</label><br/>
+				<label>
+					Path to the emulator to be used:
+					<input type="text" name="emulator_path">
+					<input type="button" name="emulator_path.fileBrowse" value="Browse">
+				</label><br/>
+				<label>
+					Arguments to pass to the emulator. %ROM will be replaced by the path to the ROM.<br/>Each newline represents a new argument.<br/>
+					<textarea name="emulator_args"></textarea>
+				</label>
+			</div>
+		</form>
+		<h1>Game Settings</h1>
+		<div id="game-containers" class="all-settings">
+		</div>
+		<input type="button" id="update-settings" value="Apply Settings">
+	</body>
+</html>
