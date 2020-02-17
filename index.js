@@ -1,33 +1,28 @@
 "use strict";
-const { app, BrowserWindow, dialog, ipcMain } = require("electron");
+const { app, BrowserWindow, dialog, ipcMain, shell, clipboard } = require("electron");
 const process = require("process");
 const fs = require("fs").promises;
 const assert = require("assert");
 const querystring = require("querystring");
 const path = require("path");
-const childProcess = require("child_process")
-const pEvent = require("p-event");
-const request = require("request-promise-any");
-const sanitize = require("sanitize-filename");
-const spawn = require('cross-spawn');
+const childProcess = require("child_process");
 const util = require("util");
-const extractZip = require("extract-zip");
-const applyBps = require("./applyBps.js");
-const Validator = require("jsonschema").Validator;
+const pEvent = require("p-event");
 const Store = require('electron-store');
 const store = new Store();
-const unhandled = require('electron-unhandled');
 
-const defaultSettings = require("./static/defaultSettings.js");
-const schema = require("./static/settingsSchema.js");
-
-unhandled({
+require("electron-unhandled")({
 	showDialog: true,
 	logger: (...args)=>{
 		console.error(...args);
 		app.quit();
 	}
 });
+
+const defaultSettings = require("./static/defaultSettings.js");
+const schema = require("./static/settingsSchema.js");
+
+//writeSettings and loadSettings for settings management
 const loadSettings = async ()=>{
 	let settings;
 	try{
@@ -43,6 +38,7 @@ const loadSettings = async ()=>{
 			throw new Error("Settings was falsy");
 		}
 		//Load schema and test
+		const Validator = require("jsonschema").Validator;
 		let settingsValidator = new Validator();
 		settingsValidator.addSchema(schema,"/SMWCentralPlayerSettingsSchema");
 		const result = settingsValidator.validate(settings,schema);
@@ -54,12 +50,6 @@ const loadSettings = async ()=>{
 
 	} catch (e){
 		console.error(e);
-		await dialog.showMessageBox({
-			type: "info",
-			buttons: ["OK"],
-			title: "SMWCentral Player",
-			message: `The Settings file was either corrupted or nonexistent. Creating a new one from defaults.\nThe error was: ${e}`
-		});
 		store.set("settings",defaultSettings);
 	}
 	console.log("Loaded Settings: " + JSON.stringify(settings));
@@ -80,20 +70,124 @@ const writeSettings = async (settings)=>{
 		throw e;
 	}
 }
-
+const openSettingsGui = async (settings)=>{
+	let settingsWindow = new BrowserWindow({
+		center: true,
+		fullscreenable: false,
+		icon: "icon.png",
+		autoHideMenuBar: true,
+		show: false,
+		title: "Settings",
+		webPreferences:{
+			devTools: true,
+			nodeIntegration: true,
+			sandbox: false,
+			enableRemoteModule: true,
+			javascript: true,
+		}
+	});
+	global.windowReferences.push(settingsWindow);
+	settingsWindow.loadFile("static/settings.html",{query: {"currSettings": JSON.stringify(settings)}});
+	await pEvent(settingsWindow,"ready-to-show");
+	settingsWindow.show();
+}
+const initialize = async (settings)=>{
+	//returns false if initializatoin failed, settings otherwise
+	while(settings.initStage !== 0){
+		switch(settings.initStage){
+			case 1:
+				settings.initStage--;
+				writeSettings(settings);
+				await dialog.showMessageBox({
+					type: "question",
+					buttons: ["Open Settings","Exit"],
+					calcelId: 0,
+					defaultId: 0,
+					title: "Final Step!",
+					message: "The program has been successfully set up. Do you wish to go to the settings to configure this installation to your liking?",
+					icon: "icon.png"
+				});
+				if(result.response === 0){
+					await openSettingsGui(settings);
+				} else {
+					app.quit();
+				}
+				break;
+			case 2:
+				let result = await dialog.showMessageBox({
+					type: "question",
+					message: "For this program to work correctly you need a userscript plugin to be installed in your browser (Both Tampermonkey and Greasemonkey are good options), as well as this program's userscript. What do you wish to do?",
+					buttons: ["Install Userscript","Skip"],
+					cancelId: 1,
+					defaultId: 0,
+					title: "Userscript Installation",
+					icon: "icon.png"
+				});
+				if(result.response === 1){
+					return false;
+				}
+				const userscriptUrl = "https://github.com/AZMCode/SMWCentral-Play-From-Browser/raw/master/Userscript/userscript.user.js";
+				shell.openExternal(userscriptUrl);
+				clipboard.writeText(userscriptUrl);
+				settings.initStage--;
+				writeSettings(settings);
+				result = await dialog.showMessageBox({
+					type: "question",
+					message: "Your default browser should be launched with the URL of the userscript to install. This should trigger a confirmation screen to install the script. In case this didn't happen, the URL to the userscript you need to install has been copied to your clipboard.",
+					buttons: ["Next"],
+					noLink: true,
+					cancelId: 0,
+					defaultId: 0,
+					title: "Userscript Installation",
+					icon: "icon.png"
+				});
+				break;
+			case 3:
+				await dialog.showMessageBox({
+					type: "question",
+					message: "Hello! Welcome to SMWCentral Play-From-Browser's setup!\nThis is a first-time configuration wizard, which will not display again once completed.",
+					buttons: ["Next"],
+					noLink: true,
+					title: "SMWCentral Play-From-Browser OOBE",
+					icon: "icon.png"
+				});
+				settings.initStage--;
+				writeSettings(settings);
+				break;
+			default:
+				settings.initStage--;
+				break;
+		}
+	}
+	return settings;
+}
 
 (async ()=>{
+	//Wait for app to be ready
 	await pEvent(app,"ready");
+	//Electron Biolerplate
 	global.windowReferences = [];
 	app.on('window-all-closed', () => {
   		app.quit()
 	});
+	//Load settings
+	const settings = await loadSettings();
+	//Load URL cmd arguments
 	const argList = process.argv.filter((arg)=>{
 		return (arg.substring(0,19) === "smwcentralplayer://")
 	});
+	//Check if the app is called to patch'a ROM
 	if(argList.length === 1){
 		//What the app does if it is time to patch'a ROM
-		try{
+		let initialized = false;
+		if(settings.initStage !== 0){
+			if(await initialize(settings) === true){
+				initialized = true;
+			}
+		} else {
+			initialized = true;
+		}
+		if(initialized){
 			//Parse Arguments
 			const query = argList[0].substring(19,argList[0].length);
 			const details = querystring.parse(query);
@@ -105,8 +199,7 @@ const writeSettings = async (settings)=>{
 				//Checks if details were not declared twice
 				return (typeof elm === "string");
 			});
-			//Load config
-			const settings = await loadSettings();
+			//Check for game availability
 			if(settings[details.type.toLowerCase()].enabled !== true){
 				await dialog.showMessageBox({
 					type: "info",
@@ -117,9 +210,9 @@ const writeSettings = async (settings)=>{
 				return;
 			}
 			//Download Patch
-			const patchFileResponse = await request({encoding: null, url:`https://dl.smwcentral.net/${details.id}/`});
-			const sanitizedZipFilename = sanitize(details.name + ".zip","_");
-			const sanitizedFolderName = sanitize(details.name,"_");
+			const patchFileResponse = await require("request-promise-any")({encoding: null, url:`https://dl.smwcentral.net/${details.id}/`});
+			const sanitizedZipFilename = require("sanitize-filename")(details.name + ".zip","_");
+			const sanitizedFolderName = require("sanitize-filename")(details.name,"_");
 			const patchPath = path.resolve(settings[details.type.toLowerCase()].patch_files_storage,sanitizedFolderName);
 			const savePath = path.resolve(patchPath,sanitizedZipFilename);
 			//Extract patch
@@ -129,7 +222,7 @@ const writeSettings = async (settings)=>{
 				//Meh, folder already exists innit? great thing...
 			}
 			fs.writeFile(savePath,patchFileResponse);
-			await util.promisify(extractZip)(savePath,{dir: patchPath});
+			await util.promisify(require("extract-zip"))(savePath,{dir: patchPath});
 			//Find patch file
 			const extractedFiles = await fs.readdir(patchPath);
 			let patchFilename = undefined;
@@ -158,38 +251,10 @@ const writeSettings = async (settings)=>{
 				return arg.replace("%ROM",patchedRomPath);
 			});
 			const execPath = settings[details.type.toLowerCase()].emulator_path;
-			spawn.sync(execPath,execArgs);
-		} catch(e) {
-			//Show using Electron's fancy dialogs
-			await dialog.showMessageBox({
-				type: "error",
-				buttons: ["OK"],
-				title: "SMWCentral Player has crashed",
-				message: `Sorry, SMWCentral Player has crashed.
-If you could help the developer by sharing the following error message back to them, that'd be deeply appreciated:
-${e.stack}`
-			});
+			require("cross-spawn").sync(execPath,execArgs);
 		}
-		app.quit();
-	} else {
+	} else if(argList.length === 0){
 		//What the app does if it isn't being used to patch'a ROM
-		//Load Settings
-		//Prepare defaultWindowSettings
-		let defaultWindowSettings = {
-			center: true,
-			fullscreenable: false,
-			icon: "icon.png",
-			autoHideMenuBar: true,
-			show: false,
-			icon: "icon.png",
-			webPreferences:{
-				devTools: true,
-				nodeIntegration: true,
-				sandbox: false,
-				enableRemoteModule: true,
-				javascript: true
-			}
-		};
 		//Prepare ipc hooks
 		ipcMain.handle("settings.write-settings",async (event,arg)=>{
 			try{
@@ -227,38 +292,39 @@ ${e.stack}`
 			}
 			return result.filePaths[0];
 		});
-		//Open main window
-		const dialogPromise = dialog.showMessageBox({
-			type: "question",
-			buttons: ["Open Settings","Exit"],
-			defaultId: 1,
-			title: "SMWCentral Player",
-			detail: `Hello!
-Welcome to SMWCentral Player
-If you see any windows pop up regarding letting this program becoming a URL handler, please allow it.
-If none appear, it means you're ready to go.
-If this is your first time, we recommend you Open Settings and configure the program to your liking.`,
-			icon: "icon.png"
-		});
 		//Sets app as default handler
 		app.setAsDefaultProtocolClient("smwcentralplayer");
-		const result = await dialogPromise;
-		switch(result.response){
-			case 0:
-				let settingsWindow = new BrowserWindow({
-					...defaultWindowSettings,
-					title: "Settings"
-				});
-				global.windowReferences.push(settingsWindow);
-				let settings = await loadSettings();
-				settingsWindow.loadFile("static/settings.html",{query: {"currSettings": JSON.stringify(settings)}});
-				await pEvent(settingsWindow,"ready-to-show");
-				settingsWindow.show();
-				break;
-			case 1:
-				app.quit();
-			default:
-				throw new Error("Dialog response ID was not expected.");
+		//Initialize if necessary
+		let initialized = false;
+		if(settings.initStage !== 0){
+			if(await initialize(settings) === true){
+				initialized = true;
+			}
+		} else {
+			initialized = true;
 		}
+		if(initialized){
+			await openSettingsGui(settings);
+		}
+
+	} else {
+		throw new Error("Multiple URL's passed. Crashing");
 	}
-})().catch((e)=>{throw e});
+})().then(async (res,e)=>{
+	if(e){
+		await dialog.showMessageBox({
+			title: "SMWCentral Player - Promise Error!",
+			type: "error",
+			message: `The program failed with an unhandled promise exception.\nPlease share this message with the developer to fix the issue:`,
+			detail: e.stack.toString(),
+			cancelId: 0,
+			noLink: true,
+			buttons: ["Exit"]
+		});
+	}
+	if(global.windowReferences.length > 0){
+		console.log("Not force-quitting because windows have been activated");
+	} else {
+		app.quit();
+	}
+});

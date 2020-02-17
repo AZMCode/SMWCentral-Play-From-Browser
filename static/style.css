@@ -6,7 +6,8 @@ body,html{
 	padding: 0px;
 	width: 100vw;
 	height: 100vh;
-	background-color: rgb(247, 245, 237);
+	font-family: Arial, sans-serif;
+	background-color: rgb(245, 245, 245);
 }
 p{
 	margin: 0px;
@@ -15,18 +16,6 @@ p{
 	padding: 1em;
 	text-align: justify;
   	text-justify: inter-word;
-}
-pre{
-	mergin: 1em;
-
-	width: 80%;
-	padding: 1em;
-	border-radius: 1em;
-	background-color: rgba(200,200,200,0.7);
-	font-size: 0.5em
-	font-family: "Lucida",monospace;
-	overflow-y: scroll;
-	overflow-x: scroll;
 }
 .filler{
 	height: 100%;
@@ -38,7 +27,7 @@ pre{
 	display: none;
 }
 .game-settings{
-
+	background-color: rgb(240,240,240);
 }
 .game-contents{
 

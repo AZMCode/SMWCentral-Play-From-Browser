@@ -1,14 +1,12 @@
 {
   "name": "smwcentral-player",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "main": "index.js",
   "license": "GPL-3.0-or-later",
   "scripts": {
     "start": "electron index.js",
     "test": "electron index.js \"smwcentralplayer://id=21493&type=SMW&name=Super+Mario+Archipelago\"",
-    "setPath": "cmd /k \"set path=%path%\"",
-    "repl": "electron-repl index.js",
-    "build": "electron-builder -w"
+    "setPath": "cmd /k \"set path=%path%\""
   },
   "dependencies": {
     "cross-spawn": "^7.0.1",
@@ -23,7 +21,6 @@
   },
   "devDependencies": {
     "electron": "^7.1.11",
-    "electron-repl": "^1.0.1",
     "electron-builder": "^22.3.2"
   },
   "build": {
@@ -38,8 +35,8 @@
     "files": [
       "**/*",
       "./static/**/*",
-	  "./defaultSettings.json",
-	  "!./External/**/*",
+      "./defaultSettings.json",
+      "!./External/**/*",
       "!**/node_modules/*/{CHANGELOG.md,README.md,README,readme.md,readme}",
       "!**/node_modules/*/{test,__tests__,tests,powered-test,example,examples}",
       "!**/node_modules/*.d.ts",
