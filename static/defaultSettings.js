@@ -5,6 +5,7 @@
 
 const defaultSettings =
 {
+	"initStage": 3,
     "smw": {
         "enabled": false,
         "patch_files_storage": "",

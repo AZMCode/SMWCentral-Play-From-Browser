@@ -79,6 +79,11 @@ const settingsSchema =
 	"type": "object",
 	"required": ["smw", "sm64", "yi"],
 	"properties":{
+		"initStage": {
+			"type": "number",
+			"multipleOf": 1,
+			"minimum": 0
+		},
 		"smw" : {"$ref": "/SMWCentralPlayerSettingsSchema#/definitions/gameConfig"},
 		"sm64": {"$ref": "/SMWCentralPlayerSettingsSchema#/definitions/gameConfig"},
 		"yi"  : {"$ref": "/SMWCentralPlayerSettingsSchema#/definitions/gameConfig"}

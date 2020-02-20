@@ -134,7 +134,8 @@ window.onload = async ()=>{
 		});
 	});
 	//Add handler to apply new settings once changed
-	document.getElementById("update-settings").addEventListener("click",async ()=>{
+	const applyButton = document.getElementById("update-settings");
+	applyButton.addEventListener("click",async ()=>{
 		for(div of containerDivs){
 			const gameSettings = settings[div.id];
 			//Set "enabled" checkbox
@@ -147,6 +148,16 @@ window.onload = async ()=>{
 			//Set emulator_args value
 			gameSettings.emulator_args = getElementsByName(div,"emulator_args")[0].value.split("\n");
 		}
-		await invoke("settings.write-settings",JSON.stringify(settings));
+		const result = await invoke("settings.write-settings",JSON.stringify(settings));
+		let buttonText;
+		if(result === true){
+			buttonText = "Settings Saved";
+		} else {
+			buttonText = "Error Saving";
+		}
+		const originalText = "Apply Settings";
+		applyButton.value = buttonText;
+		await new Promise((resolve)=>{setTimeout(resolve,2000)});
+		applyButton.value = originalText;
 	});
 }
